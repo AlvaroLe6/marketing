@@ -28,8 +28,8 @@ const router = createRouter({
       component: () => import('../views/admin/NuevoRegContabilidadView.vue'),
     },
     {
-      path: '/nuevo1',
-      name: 'nuevo-re-contabilidad1',
+      path: '/formulario-inscripcion',
+      name: 'formulario-inscripcion',
       component: () => import('../components/Forrm/FormPreInsc.vue'),
     },
     {
@@ -60,6 +60,20 @@ const router = createRouter({
           path: '/admin/account-settings',
           name: 'account-settings',
           component: () => import('../views/AccountSettingsView.vue'),
+          meta: { requiresAuth: true },
+
+        },
+        {
+          path: '/admin/reg-programa',
+          name: 'admin-reg-programa',
+          component: () => import('../views/admin/RegProgramaView.vue'),
+          meta: { requiresAuth: true },
+
+        },
+        {
+          path: '/admin/list-programas',
+          name: 'admin-list-programas',
+          component: () => import('../views/admin/ListProgramasView.vue'),
           meta: { requiresAuth: true },
 
         },
