@@ -1,13 +1,18 @@
 <script setup>
 import axios from 'axios';
-import { ref } from "vue";
+import { ref, onMounted   } from "vue";
 
 const snackbar = ref(false);
 const snackbarMessage = ref("");
-const nombrePrograma = ref("");
+const snackbarColor = ref("green");
 
+const nombrePrograma = ref("");
 const portadaUrl = ref("");
 const file = ref(null);
+
+const areas = ref([]);
+
+const area = ref("");
 
 //carga la imagen
 const handleFileChange = (event) => {
@@ -28,7 +33,9 @@ const submit = async () => {
     const formData = new FormData();
     formData.append('file', file.value);
     
-    const uploadResponse = await axios.post('http://localhost:3000/api/upload', formData, {
+    const uploadResponse = await axios.post('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/upload', formData, {
+
+    //const uploadResponse = await axios.post('http://localhost:3000/api/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -37,18 +44,43 @@ const submit = async () => {
     const fondoId = uploadResponse.data.id;
     
  // Crear el programa
- await axios.post('http://localhost:3000/api/programas', {
-      nombre: nombrePrograma.value,
+ await axios.post('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/programas', {
+  //const uploadResponse = await axios.post('http://localhost:3000/api/programas' {
+
+  nombre: nombrePrograma.value,
       fondoId
     });
     
     snackbarMessage.value = 'Programa creado con éxito';
     snackbar.value = true;
+    snackbarColor.value = 'green';
+
+  // Limpiar campos
+  nombrePrograma.value = '';
+    file.value = null;
+    portadaUrl.value = '';
+
+
   } catch (error) {
     snackbarMessage.value = 'Error al crear el programa';
     snackbar.value = true;
+    snackbarColor.value = 'red';
   }
 };
+
+// carga las areas
+const cargarAreas = async () => {
+  try {
+    const response = await axios.get('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/areas');
+    areas.value = response.data;
+  } catch (error) {
+    console.error('Error al cargar las areas', error);
+  }
+};
+onMounted(() => {
+  cargarAreas();
+});
+
 </script> 
 
 <template>
@@ -60,7 +92,7 @@ const submit = async () => {
   <v-row>
     <v-col cols="12">
       <v-card elevation="3" max-width="800" flat class="card mx-auto my-10">
-        <v-snackbar v-model="snackbar" top right color="green" :timeout="3000">
+        <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
           {{ snackbarMessage }}
           <v-btn color="white" text @click="snackbar = false"> Cerrar </v-btn>
         </v-snackbar>
@@ -82,6 +114,19 @@ const submit = async () => {
                 variant="outlined"
                 persistent-hint
               ></v-text-field>
+            </v-col>
+            <!-- Áreas -->
+
+            <v-col cols="12">
+              <v-select
+                v-model="area"
+                :items="areas"
+                 item-value="Cod_Area"
+                item-title="Nombre_Area"
+                label="Área"
+                variant="outlined"
+                persistent-hint
+              ></v-select>
             </v-col>
             <!-- Portada del programa -->
             <v-col cols="12" class="d-flex flex-column">

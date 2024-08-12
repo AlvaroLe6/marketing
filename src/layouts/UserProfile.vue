@@ -2,13 +2,12 @@
 import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from 'pinia';
 
-const { authUser, auth } = useAuthStore();
 const authStore = useAuthStore();
 
-const { userProfile } = storeToRefs(authStore);
+const { userProfile,authUser } = storeToRefs(authStore);
 
 
-console.log("Nombre de usuario cargado:", userProfile.value.username);
+console.log("Nombre de usuario cargado:", userProfile.value.nombres);
 
 </script>
 
@@ -16,9 +15,8 @@ console.log("Nombre de usuario cargado:", userProfile.value.username);
 
   <div class="user-profile">
     <div v-if="authUser">
-      Bienvenido, {{ userProfile.username || 'Usuario' }}  <!-- Muestra el nombre de usuario -->
-      <!--<img :src="auth.isAuth.photoURL" alt="Avatar del usuario">--> <!-- Muestra la foto de perfil -->
-      <!-- Otros detalles del usuario -->
+      Bienvenido, {{ userProfile.nombres || 'Usuario' }}  <!-- Muestra el nombre de usuario -->
+
     </div>
 
     <VBadge dot location="bottom right" offset-x="3" offset-y="3" color="success" bordered>
@@ -43,7 +41,7 @@ console.log("Nombre de usuario cargado:", userProfile.value.username);
               </template>
 
               <VListItemTitle class="font-weight-semibold">
-                {{ userProfile.username || 'Usuario' }}
+                {{ userProfile.nombres || 'Usuario' }}
               </VListItemTitle>
               <VListItemSubtitle>Admin</VListItemSubtitle>
             </VListItem>
@@ -58,7 +56,7 @@ console.log("Nombre de usuario cargado:", userProfile.value.username);
               <VListItemTitle :to="{ name: 'account-settings' }">Perfil</VListItemTitle>
             </VListItem>
 
-            <!-- 👉 Settings -->
+            <!-- Settings -->
             <VListItem link>
               <template #prepend>
                 <v-icon class="me-2" icon="mdi-nut" size="22" />
@@ -72,7 +70,7 @@ console.log("Nombre de usuario cargado:", userProfile.value.username);
             <!-- Divider -->
             <VDivider class="my-2" />
 
-            <!-- 👉 Logout -->
+            <!--  Logout -->
             <VListItem to="/login">
               <template #prepend>
                 <VIcon class="me-2" icon="mdi-logout" size="22" />

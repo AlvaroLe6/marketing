@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { onAuthStateChanged} from 'firebase/auth'
 import { useFirebaseAuth } from 'vuefire'
 import HomeView from '../views/HomeView.vue'
+import FormPreInsc from '@/components/Form/FormPreInsc.vue';
 
 
 const router = createRouter({
@@ -11,6 +12,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView
+    },
+    {
+      path: '/formulario-inscripcion',
+      name: 'FormPreInsc',
+      component: FormPreInsc
     },
     {
       path: '/login',
@@ -30,7 +36,17 @@ const router = createRouter({
     {
       path: '/formulario-inscripcion',
       name: 'formulario-inscripcion',
-      component: () => import('../components/Forrm/FormPreInsc.vue'),
+      component: () => import('../components/Form/FormPreInsc.vue'),
+    },
+    {
+      path: '/quienes-somos',
+      name: 'quienes-somos',
+      component: () => import('../views/QuienesSomosView.vue'),
+    },
+    {
+      path: '/oferta-academica',
+      name: 'oferta-academica',
+      component: () => import('../views/OfertaAcademicaView.vue'),
     },
     {
       path: '/admin',
@@ -77,6 +93,34 @@ const router = createRouter({
           meta: { requiresAuth: true },
 
         },
+        {
+          path: '/admin/list-asesores',
+          name: 'admin-list-asesores',
+          component: () => import('../views/admin/ListAsesoresView.vue'),
+          meta: { requiresAuth: true },
+
+        },
+        {
+          path: '/admin/reg-asesor',
+          name: 'admin-reg-asesor',
+          component: () => import('../views/admin/RegAsesoresView.vue'),
+          meta: { requiresAuth: true },
+
+        },
+        {
+          path: '/admin/list-insc-programa',
+          name: 'admin-list-insc-programa',
+          component: () => import('../views/admin/ListPreInscProgramaView.vue'),
+          meta: { requiresAuth: true },
+
+        },
+        {
+          path: '/admin/formulario-ins',
+          name: 'admin-formulario-ins',
+          component: () => import('../components/Form/Formulario.vue'),
+          meta: { requiresAuth: true },
+        },
+
       ]
     }
   ]

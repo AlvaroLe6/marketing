@@ -2,13 +2,9 @@
 import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from 'pinia';
 
-const { authUser, auth } = useAuthStore();
 const authStore = useAuthStore();
 
 const { userProfile } = storeToRefs(authStore);
-
-
-console.log("Nombre de usuario cargado:", userProfile.value.username);
 
 </script>
 
@@ -25,43 +21,54 @@ console.log("Nombre de usuario cargado:", userProfile.value.username);
 
           <v-list>
             <!--  Inicio -->
-            <v-list-item :to="{ name: 'admin-admin' }">
+            <v-list-item :to="{ name: 'home' }">
               <template #prepend>
                 <v-icon class="me-2" icon="mdi-menu" size="22" />
               </template>
               <v-list-item-title 
-              :to="{ name: 'account-settings' }">Inicio</v-list-item-title >
+              :to="{ name: 'home' }">Inicio</v-list-item-title >
             </v-list-item>
             <v-divider class="my-2" />
 
-            <!-- Marketing -->
-            <v-list-item :to="{ name: 'admin-list-contabilidad' }">
-              <template #prepend>
-                <v-icon class="me-2" icon="mdi-monitor-multiple" size="22"/>
-              </template>
+            <!--  Registro de programas -->
 
-              <v-list-item-title :to="{ name: 'account-settings' }">Marketing</v-list-item-title>
+            <v-list-item :to="{ name: 'admin-reg-programa' }">
+              <template #prepend>
+                <v-icon class="me-2" icon="mdi-monitor" size="22" />
+              </template>
+              <v-list-item-title 
+              :to="{ name: 'admin-reg-programa' }">Nuevo Porgrama</v-list-item-title >
             </v-list-item>
 
-            <!-- Administrivo -->
-            <v-list-item link>
+            <!-- Lista de Porgramas -->
+            <v-list-item :to="{ name: 'admin-list-programas' }">
+              <template #prepend>
+                <v-icon class="me-2" icon="mdi-format-list-bulleted" size="22"/>
+              </template>
+
+              <v-list-item-title :to="{ name: 'admin-list-programas' }">Programas</v-list-item-title>
+            </v-list-item>
+
+            <!-- Asesores -->
+            <v-list-item :to="{ name: 'admin-list-asesores' }">
               <template #prepend>
                 <v-icon class="me-2" icon="mdi-account-box" size="22" />
               </template>
 
-              <v-list-item-title>
-                Administrivo
+              <v-list-item-title :to="{ name: 'admin-list-asesores' }">
+                Asesores
               </v-list-item-title>
             </v-list-item>
 
-            <!-- Docentes -->
-            <v-list-item link>
+            
+            <!-- Postulantes a asesores -->
+            <v-list-item :to="{ name: 'admin-list-contabilidad' }">
               <template #prepend>
-                <v-icon class="me-2" icon="mdi-account-network" size="22" />
+                <v-icon class="me-2" icon="mdi-account-multiple" size="22" />
               </template>
 
               <v-list-item-title>
-                Docentes
+                Postulantes
               </v-list-item-title>
             </v-list-item>
           </v-list>

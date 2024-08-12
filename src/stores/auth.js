@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', () =>
     });
 
     async function fetchUserProfile(user) {
-        const docRef = doc(db, 'usuarios', user.uid);
+        const docRef = doc(db, 'users_mkt', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             userProfile.value = docSnap.data();

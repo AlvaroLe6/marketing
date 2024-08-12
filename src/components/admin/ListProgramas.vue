@@ -1,47 +1,48 @@
 <script setup>
 
-import { ref, onMounted, computed  } from "vue";
+import { ref, onMounted, computed} from "vue";
 import axios from "axios";
 import * as XLSX from 'xlsx';
-const ws = new WebSocket('ws://localhost:8080');
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from "@/stores/auth";
+import { useRouter } from 'vue-router';
 
-ws.onmessage = (message) => {
-  const data = JSON.parse(message.data);
-  if (data.Cod_Estudiante) {
-    certificadosGenerados.value[data.Cod_Estudiante] = true;
-  }
-};
+const authStore = useAuthStore();
+const { userProfile } = storeToRefs(authStore);
+const router = useRouter();
+
 const headers = ref([
-  { title: 'Nro. Carnet',text: 'Nro. Carnet',align: 'start',
-          sortable: false,
-          key: 'num_doc' },
-  { title:'Nombre', text: 'Nombre', value: 'Nombre' },
+  { title:'Programa', text: 'Programa', value: 'Nombre' },
+  { title:'Área', text: 'Área', value: 'Area' },
+  { title:'Estado', text: 'Estado', value: 'Estado' },
+  { title:'Nro. inscritos', text: 'Nro. inscritos', value: 'num_inscritos' },
   { title: 'Opciones', key: 'options', sortable: false },
 ]); 
-const registrosEstudiantes = ref([]);
+const registrosProgramas = ref([]);
 const filtroArea = ref(null);
 const filtroPrograma = ref(null);
 
-const subirArchivo = ref(null);
 
 const snackbar = ref(false);
 const snackbarText = ref("");
 const snackbarColor = ref("");
 
-// Maneja los certificados generados
-const certificadosGenerados = ref({}); 
-
 const buscarRegistrosPro = async () => {
   try {
-    const response = await axios.get(
+    const response = await axios.get('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/programas');
+
+    /*const response = await axios.get(
       `http://localhost:3000/api/programas`
-    );
+    );*/
     if (response.data) {
-      registrosEstudiantes.value = response.data;
-      // Llama a la función para verificar el estados de los certificados
-      await verificarCertificados(); 
-      console.log("los datos de los clientes: ",registrosEstudiantes.value)
-     
+      const programas = response.data;
+      const inscritosPorPrograma = await numInscritos();
+      programas.forEach(programa => {
+        const inscritos = inscritosPorPrograma.find(insc => insc.cod_programa === programa.Cod_Programa);
+        programa.num_inscritos = inscritos ? inscritos.num_inscritos : 0;
+      });
+      registrosProgramas.value = response.data;
+
       // Asegúrate de que la respuesta incluya el campo 'nombre'
     } else {
       nombrePersona.value = "Persona no encontrada";
@@ -51,37 +52,38 @@ const buscarRegistrosPro = async () => {
     nombrePersona.value = "Error en la búsqueda";
   }
 };
+
+const numInscritos = async () => {
+  try {
+    const response = await axios.get('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/inscritos_por_programa');
+    const inscritosPorPrograma = response.data;
+    return inscritosPorPrograma;
+  } catch (error) {
+    console.error('Error al obtener los inscritos:', error);
+    return [];
+  }
+};
+
 // Inicializar registros y verificar certificados
 onMounted(() => {
   buscarRegistrosPro();
-  verificarCertificados();
-
 });
+
+
 // Función para actualizar la tabla
 const initialize = async () => {
   await buscarRegistrosPro();
-  await verificarCertificados();
 };
 // exportar excel
 const exportToExcel = () => {
-  if (!registrosEstudiantes.value.length) {
+  if (!registrosProgramas.value.length) {
     console.error('No hay datos para exportar.');
     return;
   }
 
-  const ws = XLSX.utils.json_to_sheet(registrosEstudiantes.value.map(item => ({
-    Nombres: item.nombre,
-    Apellidos: item.apellidoPersona,
-    Fecha_naciemiento: item.fecha_nacimiento,
-    codigo_empaste:item.codigo_empaste,
-    inicio_tramite:item.inicio_tramite,
-    estado: item.estado,
-    Area_tramite: item.Area_tramite,
-    tipo: item.tipo,
-    programa: item.programa,
-    sede:item.sede,
-    fechaInscripcion:item.fechaInscripcion,
-
+  const ws = XLSX.utils.json_to_sheet(registrosProgramas.value.map(item => ({
+    ID: item.Cod_Programa,
+    Nombres: item.Nombre,
   })));
   
   const wb = XLSX.utils.book_new();
@@ -90,9 +92,9 @@ const exportToExcel = () => {
 };
 
 const registrosFiltrados = computed(() => {
-  return registrosEstudiantes.value.filter(registro => {
-    const AreaMatch = !filtroArea.value || registro.Area_tramite === filtroArea.value;
-    const programaMatch = !filtroPrograma.value || registro.programa === filtroPrograma.value;
+  return registrosProgramas.value.filter(registro => {
+    const AreaMatch = !filtroArea.value || registro.Area === filtroArea.value;
+    const programaMatch = !filtroPrograma.value || registro.Nombre === filtroPrograma.value;
 
     return AreaMatch && programaMatch;
 
@@ -111,88 +113,83 @@ function limpiarFiltros() {
 }
 // Obtener las Areas para el filtrado
 const itemArea = computed(() => {
-  const Areas = registrosEstudiantes.value.map(item => item.Area_tramite);
+  const Areas = registrosProgramas.value.map(item => item.Area);
   return [...new Set(Areas)];
 });
 // Obtener los programas para el filtrado
 const itemPrograma = computed(() => {
-  const programas = registrosEstudiantes.value.map(item => item.programa);
+  const programas = registrosProgramas.value.map(item => item.Nombre);
   return [...new Set(programas)];
 });
 
-const openFormularioInsc = (item) => {
-    const url = `/formulario-inscripcion?Cod_Programa=${item.Cod_Programa}&Nombre=${item.Nombre}`;
-    window.open(url, '_blank');
+const generateCustomUrl = async (Cod_Programa, Nombre, codAsesor) => {
+  try {
+    const response = await axios.post('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/generar-url-pers', {
+      codPrograma: Cod_Programa,
+      nombre: Nombre,
+      codAsesor: codAsesor
+    });
+    return response.data.shortUrl;
+  } catch (error) {
+    console.error("Error al generar la URL corta:", error);
+    return null;
+  }
 };
-const openCertificadoDesarrollo = (item) => {
-  const url = `/admin/certificado-desarrollo?num_doc=${item.num_doc}&nombre=${item.nombre}&apellido=${item.apellidoPersona}&ci=${item.ci}&tipo=${item.tipo}&programa=${item.programa}&sede=${item.sede}&fecha=${item.fecha}`;
+
+const openFormularioInsc = async (item) => {
+  const codAsesor = userProfile.value?.cod_asesor;
+  if (codAsesor) {
+    try {
+      const response = await axios.post('https://esammarketingapi-36cc8f6bb2a2.herokuapp.com/api/generar-url-pers', {
+        codPrograma: item.Cod_Programa,
+        nombre: item.Nombre,
+        codAsesor
+      });
+      const shortUrl = response.data.shortUrl;
+      const shortId = shortUrl.split('/').pop();
+      const formUrl = `https://mktlapaz.esam.edu.bo/formulario-inscripcion?k=${shortId}`;
+      window.open(formUrl, '_blank');
+    } catch (error) {
+      console.error("Error al generar la URL corta:", error);
+    }
+  } else {
+    console.error("ID de asesor no disponible");
+  }
+};
+
+const openListaInscPrograma = (item) => {
+  const url = `/admin/list-insc-programa?Cod_Programa=${item.Cod_Programa}&Nombre=${item.Nombre}`;
   window.open(url, '_blank');
 };
 
-// Permite seleccionar un archivo
-const triggerSubirArchivo = () => {
-  subirArchivo.value.click();
-};
-
-//Cargar los archivos en la base de datos
-const handleFileUpload = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append('fondo', file);
-
-  try {
-    const response = await axios.post('http://localhost:3000/api/fondo_certificados', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    console.log('Archivo subido:', response.data);
-    snackbarText.value = "Fondo del certificado actualizado";
-    snackbar.value = true;
-    snackbarColor.value = "green";
-  } catch (error) {
-    console.error('Error al subir el archivo:', error);
-    snackbarText.value = "Error al subir el archivo";
-    snackbar.value = true;
-    snackbarColor.value = "red";
+const getColorEstado = (estado) => {
+  switch (estado) {
+    case 'Nuevo':
+      return 'blue';
+    case 'Portal Esam':
+      return 'green';
+    case 'En Venta':
+      return 'purple';
+    default:
+      return 'grey';
   }
 };
-
-// Verifica los certificados generados
-const verificarCertificados = async () => {
-  try {
-    const response = await axios.get(`http://localhost:3000/api/buscar-estudiante-certificado-conclusion`);
-    if (response.data) {
-      const certificados = response.data;
-      certificados.forEach(cert => {
-        certificadosGenerados.value[cert.Cod_Estudiante] = true;
-      });
-    } else {
-      console.error("No se encontraron certificados.");
-    }
-  } catch (error) {
-    console.error("Error al verificar certificados:", error);
-  }
-};
-
 
 </script>
 
 <template>
-  <v-btn color="blue" variant="flat" :to="{ name: 'nuevo-reg-contabilidad' }">Subir archivo</v-btn>
+  <v-btn color="blue" variant="flat" :to="{ name: 'admin-reg-programa' }">Registrar Programa</v-btn>
 
-  <h2 class="text-center text-h3 my-5 font-weight-bold">Programas</h2>
+  <h2 class="text-center text-h4 font-weight-bold">Programas</h2>
 
   <v-data-table 
   class="data-table"   
-  v-if="registrosEstudiantes.length" 
   :headers="headers" 
   :items="registrosFiltrados"
   :items-per-page="10"
-  :sort-by="[{ key: 'num_doc', order: 'asc' }]">
-    
+  :sort-by="[{ key: 'num_doc', order: 'asc' }]"
+   dense
+  > 
   <template v-slot:top>
       <v-toolbar class="toolbar-tabla" flat>
         <div class="container-filtros">
@@ -241,38 +238,6 @@ const verificarCertificados = async () => {
         @click="exportToExcel">
         Excel
       </v-btn>
-      <v-icon
-        class="icon-camera"
-        @click="triggerSubirArchivo"
-        color="cyan-accent-4"
-        v-tooltip="'Fondo del certificado'"
-        large>
-        mdi-camera
-      </v-icon>
-      <input 
-        ref="subirArchivo"
-        type="file" 
-        accept="image/png, image/jpeg, image/bmp"
-        style="display: none;"
-        @change="handleFileUpload">
-       <div>
-        <v-row>
-          <v-col clos="12">
-            <v-row class="status-row">
-              <span 
-              class="point-text-generado">
-              </span>
-              <span>Generado</span>
-            </v-row>
-            <v-row class="status-row">
-              <span 
-              class="point-text-no-generado">
-              </span>
-              <span>Sin generar</span>  
-            </v-row>
-          </v-col>
-        </v-row>
-       </div> 
     </div>
     <v-spacer></v-spacer>
     <v-checkbox
@@ -284,17 +249,40 @@ const verificarCertificados = async () => {
   ></v-checkbox>
 </v-toolbar>
 </template>
+<template v-slot:item.Estado="{ item }">
+      <v-chip
+        :color="getColorEstado(item.Estado)"
+        class="text-uppercase"
+        size="small"
+        label
+      > <!-- smaller -->
+        {{ item.Estado }}
+      </v-chip>
+    </template>
 <template v-slot:item.options="{ item }">
   <div class="options-container">
   <v-icon 
       v-tooltip="'Enlace de preinscripción'"
-      color="deep-purple-darken-1"
+      color="blue-darken-4"
       size="small" 
       class="mr-2" 
-       @click="!certificadosGenerados[item.cod_estudiante] && openFormularioInsc(item)"
-      :disabled="certificadosGenerados[item.cod_estudiante]"
-      :class="{'disabled-icon': certificadosGenerados[item.cod_estudiante]}"
+       @click="openFormularioInsc(item)"
       >mdi-link-variant</v-icon>
+      <v-icon 
+      v-tooltip="'Inscritos'"
+      color="blue-darken-4"
+      size="small" 
+      class="mr-2" 
+       @click="openListaInscPrograma(item)"
+
+      >mdi-table-large</v-icon>
+      <v-icon 
+      v-tooltip="'Estado'"
+      color="green-darken-4"
+      size="small" 
+      class="mr-2" 
+      
+      >mdi-autorenew</v-icon>
     </div>
     </template>
     <template v-slot:no-data>
@@ -315,6 +303,13 @@ const verificarCertificados = async () => {
   </v-snackbar>
 </template>
 <style>
+.text-center
+{
+  color: #162D4B;
+  padding: 5px;
+  margin: 0px;
+}
+
 .options-container {
   display: flex;
   align-items: center;
@@ -323,29 +318,11 @@ const verificarCertificados = async () => {
   display: flex;
   align-items: center;
 }
-.point-text-generado {
-  margin-right: 3px;
-  background-color: green; /* Color del punto */
-  width: 9px; /* Tamaño del punto */
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.point-text-no-generado {
-  margin-right: 3px;
-  background-color: red; /* Color del punto */
-  width: 9px; /* Tamaño del punto */
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.disabled-icon {
-  opacity: 0.5;
-  pointer-events: none; /* Deshabilita los clics en el icono */
-}
+
 .data-table{
-  padding: 10px;
+  padding: 2px;
   border-collapse: collapse; /* Las líneas de la tabla no tienen espacios */
+  font-size: 12px;
 }
 .toolbar-tabla {
   background-color: transparent;
@@ -375,7 +352,7 @@ const verificarCertificados = async () => {
   max-width: 220px;
   width: 220px;
   height:40px;
-  font-size: 11;
+  font-size: 10;
 }
 
 /* Ajusta la altura del v-select y v-field */
@@ -408,16 +385,23 @@ const verificarCertificados = async () => {
   font-size: 12px; 
 }
 .data-table thead {
-  background-color: #D1C4E9;
-  padding: 10px;
+  background-color:#BBDEFB;
+  padding: 5px;
+ }
+ .data-table thead td, .data-table thead th {
+  background-color:#BBDEFB;
+  padding: 5px;
  }
 .data-table th, .data-table td {
-  padding: 10px;
+  padding: 5px;
   border-bottom: 1px solid #162D4B; /* Añade una línea en la parte inferior de las celdas */
   border-right: 1px solid #162D4B; /* Añade una línea a la derecha de las celdas */
   border-left: 1px solid #162D4B; /* Añade una línea a la izquierda de las celdas */
   border-top: 1px solid #162D4B; /* Añade una línea en la parte superior de las celdas */
 
+  /* Sobrescribir padding inline específico */
+  padding-right: 5px !important; /* Ajusta el padding derecho */
+  padding-left: 5px !important; /* Ajusta el padding izquierdo */
 }
 
 </style> 

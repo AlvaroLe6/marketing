@@ -10,7 +10,7 @@ export const authRegister = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      await setDoc(doc(db, 'usuarios', user.uid), {
+      await setDoc(doc(db, 'users_mkt', user.uid), {
         username: username,
       });
 
